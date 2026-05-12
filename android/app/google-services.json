@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1066055516908",
+    "project_id": "genui-sample-ef452",
+    "storage_bucket": "genui-sample-ef452.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1066055516908:android:b9c80e8f5faa0c33d65bc9",
+        "android_client_info": {
+          "package_name": "com.example.maya_flow_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-mzbDM5ULIObK2YuaYtRI69rxZcQGwmg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
