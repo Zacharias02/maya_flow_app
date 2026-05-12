@@ -22,7 +22,12 @@ String stripLeakedA2UiJsonFromAssistantText(String text) {
       final m = Map<String, dynamic>.from(decoded);
       if (m['version'] != 'v0.9') break;
 
-      result = result.replaceRange(start, start + jsonStr.length, '');
+      final end = start + jsonStr.length;
+      final needsSpace = start > 0 &&
+          end < result.length &&
+          !_isWhitespace(result[start - 1]) &&
+          !_isWhitespace(result[end]);
+      result = result.replaceRange(start, end, needsSpace ? ' ' : '');
       continue;
     } on FormatException {
       break;
@@ -31,6 +36,8 @@ String stripLeakedA2UiJsonFromAssistantText(String text) {
 
   return result.replaceAll(RegExp(r'\n{3,}'), '\n\n').trimRight();
 }
+
+bool _isWhitespace(String c) => c == ' ' || c == '\n' || c == '\r' || c == '\t';
 
 /// Extracts one balanced `{ ... }` substring starting at [start] (must be `{`).
 String? _extractBalancedBrace(String s, int start) {

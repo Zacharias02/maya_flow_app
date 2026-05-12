@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 /// Catalog: white card + thin border shell; interior uses Maya / theme accents.
 abstract final class MayaCatalogTheme {
   /// Primary catalog typeface (headings, buttons, emphasis).
-  static const String fontPro = 'cerebriSansPro';
+  static const String fontPro = 'Jeko';
 
   /// Book weight for supporting copy and form labels.
-  static const String fontBook = 'cerebriSansProBook';
+  static const String fontBook = 'Jeko';
 
   /// Maya brand green (aligned with [MayaChatTheme.brandGreen]).
   static const Color brandGreen = Color(0xFF00A651);

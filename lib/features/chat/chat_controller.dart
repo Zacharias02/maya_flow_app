@@ -39,6 +39,8 @@ class ChatController extends ChangeNotifier {
   }
 
   /// Hides A2UI JSON that GenUI surfaced as plain text when the model used the wrong JSON shape.
+  /// If stripping empties the entire bubble, removes the entry entirely — an empty
+  /// ChatEntry would still render as a phantom bubble.
   void _stripLeakedA2UiFromLastAiBubble() {
     final idx = _currentAiTextIndex;
     if (idx == null || idx >= _messages.length) return;
@@ -47,13 +49,21 @@ class ChatController extends ChangeNotifier {
     final t = entry.text;
     if (t == null || t.isEmpty) return;
     final cleaned = stripLeakedA2UiJsonFromAssistantText(t);
-    if (cleaned != t) {
+    if (cleaned == t) return;
+    if (cleaned.trim().isEmpty) {
+      // The whole content was leaked JSON — delete the phantom bubble.
+      _messages.removeAt(idx);
+      _currentAiTextIndex = null;
+    } else {
       _messages[idx] = ChatEntry.aiText(cleaned);
     }
   }
 
   void _onEvent(ConversationEvent event) {
     if (event is ConversationSurfaceAdded) {
+      // Flush any leaked JSON from the preceding text bubble before we lose
+      // track of its index — once _currentAiTextIndex is nulled we can't find it.
+      _stripLeakedA2UiFromLastAiBubble();
       _awaitingFirstChunk = false;
       _currentAiTextIndex = null;
       _messages.add(ChatEntry.surface(event.surfaceId));
@@ -119,6 +129,20 @@ class ChatEntry {
 
   bool get isSurface => surfaceId != null;
 
-  ChatEntry appendText(String more) =>
-      ChatEntry._(text: (text ?? '') + more, isUser: isUser);
+  ChatEntry appendText(String more) {
+    final existing = text ?? '';
+    if (existing.isEmpty || more.isEmpty) {
+      return ChatEntry._(text: existing + more, isUser: isUser);
+    }
+    final last = existing[existing.length - 1];
+    final first = more[0];
+    // Insert a space when a word character abuts a letter — guards against
+    // chunks that arrive at a word boundary without the separating space.
+    // We skip digit–digit so numbers split across chunks stay intact.
+    final needsSpace = _isWordChar(last) && _isLetter(first);
+    return ChatEntry._(text: existing + (needsSpace ? ' ' : '') + more, isUser: isUser);
+  }
 }
+
+bool _isWordChar(String c) => RegExp(r'[a-zA-Z0-9]').hasMatch(c);
+bool _isLetter(String c) => RegExp(r'[a-zA-Z]').hasMatch(c);

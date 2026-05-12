@@ -1,6 +1,8 @@
+const mockClientFirstName = 'Gab';
+
 const mockUserContext = '''
-User: Juan dela Cruz
-Email: juan@example.com
+User: Gab Garrero
+Email: gab@example.com
 Phone: +63 917 123 4567
 
 Recent Transaction:

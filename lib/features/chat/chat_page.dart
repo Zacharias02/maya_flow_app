@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:genui/genui.dart';
 
+import '../../core/mock/mock_data.dart';
 import '../../shared/customer_chat_copy.dart';
+import '../../shared/widgets/maya_animated_orb.dart';
 import 'chat_controller.dart';
 import 'chat_theme.dart';
 import 'widgets/chat_quick_reply_column.dart';
@@ -147,29 +150,32 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const MayaAnimatedOrb(size: 148),
+                  const SizedBox(height: 28),
                   Text(
-                    'Hi! I\'m Maya.',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    'Hello, $mockClientFirstName!',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
                       color: MayaChatTheme.appBarTitle,
+                      letterSpacing: -0.3,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Choose a topic below or type your own message.',
+                    'How can I assist you today?',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: MayaChatTheme.hintAndSubtitle,
-                      height: 1.4,
+                      height: 1.5,
                     ),
                   ),
                 ],
@@ -244,6 +250,7 @@ class _AiBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseStyle = MayaChatTheme.botBubbleTextStyle(MayaChatTheme.appBarTitle);
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -253,9 +260,21 @@ class _AiBubble extends StatelessWidget {
           color: MayaChatTheme.botBubbleBackground,
           borderRadius: MayaChatTheme.bubbleRadius,
         ),
-        child: Text(
-          text,
-          style: MayaChatTheme.botBubbleTextStyle(MayaChatTheme.appBarTitle),
+        child: MarkdownBody(
+          data: text,
+          styleSheet: MarkdownStyleSheet(
+            p: baseStyle,
+            strong: baseStyle.copyWith(fontWeight: FontWeight.w700),
+            em: baseStyle.copyWith(fontStyle: FontStyle.italic),
+            listBullet: baseStyle,
+            blockquote: baseStyle.copyWith(color: MayaChatTheme.hintAndSubtitle),
+            h1: baseStyle.copyWith(fontSize: 17, fontWeight: FontWeight.w700),
+            h2: baseStyle.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
+            h3: baseStyle.copyWith(fontWeight: FontWeight.w700),
+            pPadding: EdgeInsets.zero,
+            blockSpacing: 6,
+          ),
+          shrinkWrap: true,
         ),
       ),
     );

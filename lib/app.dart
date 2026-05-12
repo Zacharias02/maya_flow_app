@@ -15,6 +15,7 @@ class MayaFlowApp extends StatelessWidget {
           seedColor: const Color(0xFF00A651), // Maya green
           brightness: Brightness.light,
         ),
+        fontFamily: 'Jeko',
         useMaterial3: true,
       ),
       home: const ChatPage(),
