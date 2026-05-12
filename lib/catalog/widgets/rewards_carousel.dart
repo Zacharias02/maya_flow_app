@@ -78,9 +78,11 @@ class _RewardsCarouselState extends State<_RewardsCarousel> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
+                  decoration: ShapeDecoration(
                     color: MayaCatalogTheme.tintSurface(context),
-                    borderRadius: MayaCatalogTheme.innerRadius,
+                    shape: const ContinuousRectangleBorder(
+                      borderRadius: MayaCatalogTheme.squircleInner,
+                    ),
                   ),
                   child: Icon(Icons.card_giftcard_rounded, color: cs.primary, size: 22),
                 ),
@@ -131,20 +133,22 @@ class _RewardsCarouselState extends State<_RewardsCarousel> {
                 return Padding(
                   padding: const EdgeInsets.only(left: 14, right: 10, bottom: 10, top: 4),
                   child: DecoratedBox(
-                    decoration: BoxDecoration(
+                    decoration: ShapeDecoration(
                       color: MayaCatalogTheme.cardWhite,
-                      borderRadius: MayaCatalogTheme.innerRadius,
-                      border: Border.all(
-                        color: active ? cs.primary.withValues(alpha: 0.35) : MayaCatalogTheme.stroke,
-                        width: active ? 1.5 : 1,
-                      ),
-                      boxShadow: [
+                      shadows: [
                         BoxShadow(
                           color: cs.primary.withValues(alpha: 0.06),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
                       ],
+                      shape: ContinuousRectangleBorder(
+                        side: BorderSide(
+                          color: active ? cs.primary.withValues(alpha: 0.35) : MayaCatalogTheme.stroke,
+                          width: active ? 1.5 : 1,
+                        ),
+                        borderRadius: MayaCatalogTheme.squircleInner,
+                      ),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(16),

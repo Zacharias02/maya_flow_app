@@ -37,9 +37,11 @@ class _AccountLimitBar extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
+                decoration: ShapeDecoration(
                   color: MayaCatalogTheme.tintSurface(context),
-                  borderRadius: MayaCatalogTheme.innerRadius,
+                  shape: const ContinuousRectangleBorder(
+                    borderRadius: MayaCatalogTheme.squircleInner,
+                  ),
                 ),
                 child: Icon(Icons.account_balance_wallet_outlined, color: cs.primary, size: 22),
               ),
@@ -97,9 +99,11 @@ class _AccountLimitBar extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            decoration: BoxDecoration(
+            decoration: ShapeDecoration(
               color: MayaCatalogTheme.tintSurface(context),
-              borderRadius: MayaCatalogTheme.innerRadius,
+              shape: const ContinuousRectangleBorder(
+                borderRadius: MayaCatalogTheme.squircleInner,
+              ),
             ),
             child: Text(
               'Total limit: $currency ${_format(total)}',

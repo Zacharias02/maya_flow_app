@@ -231,9 +231,11 @@ class _UserBubble extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.fromLTRB(56, 4, 16, 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: const BoxDecoration(
+        decoration: const ShapeDecoration(
           color: MayaChatTheme.brandGreen,
-          borderRadius: MayaChatTheme.bubbleRadius,
+          shape: ContinuousRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(28)),
+          ),
         ),
         child: Text(
           text,
@@ -256,9 +258,11 @@ class _AiBubble extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 4, 56, 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: const BoxDecoration(
+        decoration: const ShapeDecoration(
           color: MayaChatTheme.botBubbleBackground,
-          borderRadius: MayaChatTheme.bubbleRadius,
+          shape: ContinuousRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(28)),
+          ),
         ),
         child: MarkdownBody(
           data: text,

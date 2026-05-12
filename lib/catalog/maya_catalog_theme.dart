@@ -18,14 +18,22 @@ abstract final class MayaCatalogTheme {
   static const Color trackGray = Color(0xFFEEEEEE);
   static const Color muted = Color(0xFF757575);
 
-  static const BorderRadius cardRadius = BorderRadius.all(Radius.circular(12));
+  // Superellipse radii (ContinuousRectangleBorder). Use these instead of
+  // plain BorderRadius so corners follow the squircle curve throughout the UI.
+  static const BorderRadius squircleCard   = BorderRadius.all(Radius.circular(28));
+  static const BorderRadius squircleInner  = BorderRadius.all(Radius.circular(20));
+  static const BorderRadius squircleButton = BorderRadius.all(Radius.circular(32));
+
+  // Legacy — kept so OutlineInputBorder in inputDecoration() still works.
   static const BorderRadius fieldRadius = BorderRadius.all(Radius.circular(8));
   static const BorderRadius innerRadius = fieldRadius;
 
-  static BoxDecoration cardShell() => BoxDecoration(
+  static ShapeDecoration cardShell() => const ShapeDecoration(
         color: cardWhite,
-        borderRadius: cardRadius,
-        border: Border.all(color: borderGray, width: 1),
+        shape: ContinuousRectangleBorder(
+          side: BorderSide(color: borderGray, width: 1),
+          borderRadius: squircleCard,
+        ),
       );
 
   static Color tintSurface(BuildContext context) =>
@@ -113,7 +121,7 @@ abstract final class MayaCatalogTheme {
         fontSize: 15,
       ),
       padding: const EdgeInsets.symmetric(vertical: 14),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: const ContinuousRectangleBorder(borderRadius: squircleButton),
     );
   }
 }

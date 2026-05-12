@@ -96,9 +96,11 @@ class _SendMoneyToUserFormState extends State<_SendMoneyToUserForm> {
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
+                decoration: ShapeDecoration(
                   color: MayaCatalogTheme.tintSurface(context),
-                  borderRadius: MayaCatalogTheme.innerRadius,
+                  shape: const ContinuousRectangleBorder(
+                    borderRadius: MayaCatalogTheme.squircleInner,
+                  ),
                 ),
                 child: Icon(Icons.send_rounded, color: cs.primary, size: 22),
               ),

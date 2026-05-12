@@ -124,15 +124,21 @@ class _ChoiceButton extends StatelessWidget {
       opacity: dimmed ? 0.35 : 1.0,
       child: Material(
         color: selected ? (isGreen ? MayaCatalogTheme.brandGreenDark : MayaCatalogTheme.brandGreen.withValues(alpha: 0.1)) : bg,
-        borderRadius: BorderRadius.circular(12),
+        shape: const ContinuousRectangleBorder(
+          borderRadius: MayaCatalogTheme.squircleInner,
+        ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          customBorder: const ContinuousRectangleBorder(
+            borderRadius: MayaCatalogTheme.squircleInner,
+          ),
           onTap: dimmed ? null : onTap,
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 13),
-            decoration: BoxDecoration(
-              border: Border.fromBorderSide(border),
-              borderRadius: BorderRadius.circular(12),
+            decoration: ShapeDecoration(
+              shape: ContinuousRectangleBorder(
+                side: border,
+                borderRadius: MayaCatalogTheme.squircleInner,
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,

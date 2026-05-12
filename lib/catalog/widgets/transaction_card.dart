@@ -38,11 +38,13 @@ class _TransactionCard extends StatelessWidget {
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
+                decoration: ShapeDecoration(
                   color: isDeclined
                       ? cs.error.withValues(alpha: 0.1)
                       : MayaCatalogTheme.tintSurface(context),
-                  borderRadius: MayaCatalogTheme.innerRadius,
+                  shape: const ContinuousRectangleBorder(
+                    borderRadius: MayaCatalogTheme.squircleInner,
+                  ),
                 ),
                 child: Icon(
                   Icons.receipt_long_rounded,
@@ -83,9 +85,11 @@ class _TransactionCard extends StatelessWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
+              decoration: ShapeDecoration(
                 color: cs.surfaceContainerHighest.withValues(alpha: 0.65),
-                borderRadius: MayaCatalogTheme.innerRadius,
+                shape: const ContinuousRectangleBorder(
+                  borderRadius: MayaCatalogTheme.squircleInner,
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
