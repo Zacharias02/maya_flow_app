@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:genui/genui.dart';
 
+import '../maya_catalog_theme.dart';
 import '../schemas/account_limit_bar_schema.dart';
 
 final accountLimitBar = CatalogItem(
@@ -26,84 +27,89 @@ class _AccountLimitBar extends StatelessWidget {
     final available = total - used;
     final ratio = total > 0 ? (used / total).clamp(0.0, 1.0) : 0.0;
     final isHighUsage = ratio >= 0.8;
+    final cs = Theme.of(context).colorScheme;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+    return MayaCatalogCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: MayaCatalogTheme.tintSurface(context),
+                  borderRadius: MayaCatalogTheme.innerRadius,
                 ),
-                Text(
-                  '${(ratio * 100).toStringAsFixed(0)}% used',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isHighUsage
-                        ? Theme.of(context).colorScheme.error
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: ratio,
-                minHeight: 12,
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation(
-                  isHighUsage
-                      ? Theme.of(context).colorScheme.error
-                      : Theme.of(context).colorScheme.primary,
-                ),
+                child: Icon(Icons.account_balance_wallet_outlined, color: cs.primary, size: 22),
               ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Used', style: Theme.of(context).textTheme.labelSmall),
+                    Text(label, style: MayaCatalogTheme.titleStyle(context)),
                     Text(
-                      '$currency ${_format(used)}',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                      'Your usage this period',
+                      style: MayaCatalogTheme.subtitleStyle(context),
                     ),
                   ],
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('Available', style: Theme.of(context).textTheme.labelSmall),
-                    Text(
-                      '$currency ${_format(available)}',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+              ),
+              Text(
+                '${(ratio * 100).toStringAsFixed(0)}% used',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: isHighUsage ? cs.error : MayaCatalogTheme.brandGreen,
+                      fontWeight: FontWeight.w700,
                     ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Total limit: $currency ${_format(total)}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: ratio,
+              minHeight: 11,
+              backgroundColor: MayaCatalogTheme.trackGray,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isHighUsage ? cs.error : MayaCatalogTheme.brandGreen,
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _AmountBlock(
+                label: 'Used',
+                value: '$currency ${_format(used)}',
+                emphasize: false,
+              ),
+              _AmountBlock(
+                label: 'Available',
+                value: '$currency ${_format(available)}',
+                emphasize: true,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            decoration: BoxDecoration(
+              color: MayaCatalogTheme.tintSurface(context),
+              borderRadius: MayaCatalogTheme.innerRadius,
+            ),
+            child: Text(
+              'Total limit: $currency ${_format(total)}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -115,5 +121,42 @@ class _AccountLimitBar extends StatelessWidget {
       (m) => '${m[1]},',
     );
     return '$whole.${parts[1]}';
+  }
+}
+
+class _AmountBlock extends StatelessWidget {
+  const _AmountBlock({
+    required this.label,
+    required this.value,
+    required this.emphasize,
+  });
+
+  final String label;
+  final String value;
+  final bool emphasize;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: emphasize ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: emphasize ? MayaCatalogTheme.brandGreen : cs.onSurface,
+              ),
+        ),
+      ],
+    );
   }
 }

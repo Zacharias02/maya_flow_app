@@ -59,6 +59,15 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Cerebri Sans Pro (project `fonts/` — filenames are case-sensitive).
+  fonts:
+    - family: cerebriSansProBook
+      fonts:
+        - asset: fonts/CerebriSansPro-Book.otf
+    - family: cerebriSansPro
+      fonts:
+        - asset: fonts/CerebriSansPro-Regular.otf
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

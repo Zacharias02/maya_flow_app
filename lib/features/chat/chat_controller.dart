@@ -5,6 +5,7 @@ import 'package:genui/genui.dart';
 
 import '../../catalog/maya_catalog.dart';
 import '../../core/ai/gemini_transport.dart';
+import 'a2ui_leak_sanitizer.dart';
 
 class ChatController extends ChangeNotifier {
   late final SurfaceController _surfaceController;
@@ -15,10 +16,14 @@ class ChatController extends ChangeNotifier {
   final List<ChatEntry> _messages = [];
   StreamSubscription<ConversationEvent>? _eventSub;
   int? _currentAiTextIndex;
+  bool _awaitingFirstChunk = false;
 
   List<ChatEntry> get messages => List.unmodifiable(_messages);
   SurfaceHost get surfaceHost => _surfaceController;
   bool get isWaiting => _conversation.state.value.isWaiting;
+
+  /// True from send until the first streamed text or surface arrives for that turn.
+  bool get showThinkingIndicator => _awaitingFirstChunk;
 
   void init() {
     _surfaceController = SurfaceController(catalogs: [mayaCatalog()]);
@@ -33,12 +38,28 @@ class ChatController extends ChangeNotifier {
     _eventSub = _conversation.events.listen(_onEvent);
   }
 
+  /// Hides A2UI JSON that GenUI surfaced as plain text when the model used the wrong JSON shape.
+  void _stripLeakedA2UiFromLastAiBubble() {
+    final idx = _currentAiTextIndex;
+    if (idx == null || idx >= _messages.length) return;
+    final entry = _messages[idx];
+    if (entry.isUser || entry.isSurface) return;
+    final t = entry.text;
+    if (t == null || t.isEmpty) return;
+    final cleaned = stripLeakedA2UiJsonFromAssistantText(t);
+    if (cleaned != t) {
+      _messages[idx] = ChatEntry.aiText(cleaned);
+    }
+  }
+
   void _onEvent(ConversationEvent event) {
     if (event is ConversationSurfaceAdded) {
+      _awaitingFirstChunk = false;
       _currentAiTextIndex = null;
       _messages.add(ChatEntry.surface(event.surfaceId));
       notifyListeners();
     } else if (event is ConversationContentReceived) {
+      _awaitingFirstChunk = false;
       final idx = _currentAiTextIndex;
       if (idx != null) {
         _messages[idx] = _messages[idx].appendText(event.text);
@@ -46,9 +67,11 @@ class ChatController extends ChangeNotifier {
         _currentAiTextIndex = _messages.length;
         _messages.add(ChatEntry.aiText(event.text));
       }
+      _stripLeakedA2UiFromLastAiBubble();
       notifyListeners();
     } else if (event is ConversationError) {
       print(event.error);
+      _awaitingFirstChunk = false;
       _currentAiTextIndex = null;
       _messages.add(
         ChatEntry.aiText('Something went wrong. Please try again.'),
@@ -60,8 +83,14 @@ class ChatController extends ChangeNotifier {
   Future<void> sendMessage(String text) async {
     _currentAiTextIndex = null;
     _messages.add(ChatEntry.user(text));
+    _awaitingFirstChunk = true;
     notifyListeners();
-    await _conversation.sendRequest(ChatMessage.user(text));
+    try {
+      await _conversation.sendRequest(ChatMessage.user(text));
+    } finally {
+      _awaitingFirstChunk = false;
+      notifyListeners();
+    }
   }
 
   @override

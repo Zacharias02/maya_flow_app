@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:genui/genui.dart';
 
-import '../../shared/widgets/maya_avatar.dart';
+import '../../shared/customer_chat_copy.dart';
 import 'chat_controller.dart';
+import 'chat_theme.dart';
+import 'widgets/chat_quick_reply_column.dart';
+import 'widgets/chat_typing_phrase_bubble.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -52,31 +55,44 @@ class _ChatPageState extends State<ChatPage> {
     _controller.sendMessage(text);
   }
 
+  void _sendPrefilled(String text) {
+    if (_controller.isWaiting) return;
+    _controller.sendMessage(text);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: MayaChatTheme.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        title: Row(
-          children: [
-            const MayaAvatar(radius: 14),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('MayaFlow', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(
-                  'AI Customer Support',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8),
-                  ),
-                ),
-              ],
-            ),
-          ],
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: MayaChatTheme.scaffoldBackground,
+        surfaceTintColor: Colors.transparent,
+
+        title: const Text(
+          'Customer service chat',
+          style: TextStyle(
+            color: MayaChatTheme.appBarTitle,
+            fontWeight: FontWeight.w700,
+            fontSize: 17,
+          ),
         ),
+        centerTitle: false,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.access_time_outlined),
+            color: MayaChatTheme.appBarTitle,
+            tooltip: 'Chat history',
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            color: MayaChatTheme.appBarTitle,
+            tooltip: 'Close',
+            onPressed: () => Navigator.maybePop(context),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -85,14 +101,20 @@ class _ChatPageState extends State<ChatPage> {
               listenable: _controller,
               builder: (context, _) {
                 final messages = _controller.messages;
+                final showThinking = _controller.showThinkingIndicator;
                 if (messages.isEmpty) {
-                  return _EmptyState();
+                  return _EmptyState(onSelectSuggestion: _sendPrefilled);
                 }
                 return ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  itemCount: messages.length,
+                  padding: const EdgeInsets.only(bottom: 12),
+                  itemCount: messages.length + (showThinking ? 1 : 0),
                   itemBuilder: (context, index) {
+                    if (showThinking && index == messages.length) {
+                      return ChatTypingPhraseBubble(
+                        key: ValueKey<int>(messages.length),
+                      );
+                    }
                     return _MessageItem(
                       entry: messages[index],
                       surfaceHost: _controller.surfaceHost,
@@ -108,6 +130,7 @@ class _ChatPageState extends State<ChatPage> {
               controller: _textController,
               onSend: _send,
               isWaiting: _controller.isWaiting,
+              showThinking: _controller.showThinkingIndicator,
             ),
           ),
         ],
@@ -117,28 +140,51 @@ class _ChatPageState extends State<ChatPage> {
 }
 
 class _EmptyState extends StatelessWidget {
+  const _EmptyState({required this.onSelectSuggestion});
+
+  final ValueChanged<String> onSelectSuggestion;
+
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const MayaAvatar(radius: 32),
-          const SizedBox(height: 16),
-          Text(
-            'Hi! I\'m Maya.',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Ask me about your transactions,\naccount limits, or update your details.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Hi! I\'m Maya.',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: MayaChatTheme.appBarTitle,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Choose a topic below or type your own message.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: MayaChatTheme.hintAndSubtitle,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
-      ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: ChatQuickReplyColumn(
+            suggestions: kDefaultChatQuickReplies,
+            onSelect: onSelectSuggestion,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -153,8 +199,10 @@ class _MessageItem extends StatelessWidget {
   Widget build(BuildContext context) {
     if (entry.isSurface) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Surface(surfaceContext: surfaceHost.contextFor(entry.surfaceId!)),
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        child: Surface(
+          surfaceContext: surfaceHost.contextFor(entry.surfaceId!),
+        ),
       );
     }
 
@@ -175,20 +223,15 @@ class _UserBubble extends StatelessWidget {
     return Align(
       alignment: Alignment.centerRight,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(64, 4, 16, 4),
+        margin: const EdgeInsets.fromLTRB(56, 4, 16, 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            topRight: Radius.circular(4),
-            bottomLeft: Radius.circular(16),
-            bottomRight: Radius.circular(16),
-          ),
+        decoration: const BoxDecoration(
+          color: MayaChatTheme.brandGreen,
+          borderRadius: MayaChatTheme.bubbleRadius,
         ),
         child: Text(
           text,
-          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+          style: MayaChatTheme.userBubbleTextStyle(Colors.white),
         ),
       ),
     );
@@ -203,30 +246,17 @@ class _AiBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.centerLeft,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(12, 0, 6, 4),
-            child: MayaAvatar(radius: 12),
-          ),
-          Flexible(
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(0, 4, 64, 4),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHigh,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(16),
-                  bottomLeft: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-              ),
-              child: Text(text),
-            ),
-          ),
-        ],
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 4, 56, 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: const BoxDecoration(
+          color: MayaChatTheme.botBubbleBackground,
+          borderRadius: MayaChatTheme.bubbleRadius,
+        ),
+        child: Text(
+          text,
+          style: MayaChatTheme.botBubbleTextStyle(MayaChatTheme.appBarTitle),
+        ),
       ),
     );
   }
@@ -236,63 +266,112 @@ class _InputBar extends StatelessWidget {
   final TextEditingController controller;
   final VoidCallback onSend;
   final bool isWaiting;
+  final bool showThinking;
 
   const _InputBar({
     required this.controller,
     required this.onSend,
     required this.isWaiting,
+    required this.showThinking,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hint = showThinking
+        ? 'Please wait…'
+        : isWaiting
+        ? 'Maya is replying…'
+        : 'Type a message';
+
     return SafeArea(
+      top: false,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border(
-            top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-          ),
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(8, 10, 12, 10),
+        decoration: const BoxDecoration(
+          color: MayaChatTheme.inputBarBackground,
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            IconButton(
+              icon: const Icon(Icons.photo_camera_outlined),
+              color: MayaChatTheme.appBarTitle,
+              tooltip: 'Camera',
+              onPressed: isWaiting ? null : () {},
+            ),
+            IconButton(
+              icon: const Icon(Icons.description_outlined),
+              color: MayaChatTheme.appBarTitle,
+              tooltip: 'Attachments',
+              onPressed: isWaiting ? null : () {},
+            ),
             Expanded(
               child: TextField(
                 controller: controller,
                 onSubmitted: (_) => onSend(),
                 textInputAction: TextInputAction.send,
                 enabled: !isWaiting,
-                decoration: InputDecoration(
-                  hintText: isWaiting ? 'Maya is thinking…' : 'Ask Maya anything…',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  isDense: true,
-                ),
                 minLines: 1,
                 maxLines: 4,
-              ),
-            ),
-            const SizedBox(width: 8),
-            isWaiting
-                ? Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  )
-                : IconButton.filled(
-                    onPressed: onSend,
-                    icon: const Icon(Icons.send_rounded),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                style: const TextStyle(
+                  color: MayaChatTheme.appBarTitle,
+                  fontSize: 15,
+                ),
+                cursorColor: MayaChatTheme.brandGreen,
+                decoration: InputDecoration(
+                  hintText: hint,
+                  hintStyle: const TextStyle(
+                    color: MayaChatTheme.hintAndSubtitle,
+                  ),
+                  filled: true,
+                  fillColor: MayaChatTheme.scaffoldBackground,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: MayaChatTheme.inputFieldRadius,
+                    borderSide: const BorderSide(
+                      color: MayaChatTheme.inputFieldBorder,
                     ),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: MayaChatTheme.inputFieldRadius,
+                    borderSide: const BorderSide(
+                      color: MayaChatTheme.inputFieldBorder,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: MayaChatTheme.inputFieldRadius,
+                    borderSide: const BorderSide(
+                      color: MayaChatTheme.brandGreen,
+                      width: 1.5,
+                    ),
+                  ),
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: MayaChatTheme.inputFieldRadius,
+                    borderSide: BorderSide(
+                      color: MayaChatTheme.inputFieldBorder.withValues(
+                        alpha: 0.6,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (!isWaiting) ...[
+              const SizedBox(width: 4),
+              IconButton.filled(
+                onPressed: onSend,
+                icon: const Icon(Icons.send_rounded, size: 20),
+                style: IconButton.styleFrom(
+                  backgroundColor: MayaChatTheme.brandGreen,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ] else
+              const SizedBox(width: 4),
           ],
         ),
       ),
