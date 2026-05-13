@@ -31,7 +31,8 @@ String _formatUiInteraction(String interactionJson) {
         ..writeln(
           '[The user used an in-chat template (interactive card) in the Maya customer service thread. '
           'Reply right away with a short, warm follow-up—confirm what they did, offer a clear next step, '
-          'or ask one specific question. Do not leave the conversation hanging.]',
+          'or ask one specific question. Do not leave the conversation hanging. '
+          'If Action is DuplicateProfileChoice_selected: the card already showed processing, failure, and ticket email—answer in 1–2 sentences only; do not repeat that whole story or emit another DuplicateProfileChoice.]',
         )
         ..writeln('Action: $name');
       if (surfaceId != null) buf.writeln('Surface id: $surfaceId');

@@ -5,6 +5,7 @@ import 'package:genui/genui.dart';
 
 import '../../catalog/maya_catalog.dart';
 import '../../core/ai/gemini_transport.dart';
+import '../../core/session/duplicate_account_flow_gate.dart';
 import 'a2ui_leak_sanitizer.dart';
 
 class ChatController extends ChangeNotifier {
@@ -26,6 +27,7 @@ class ChatController extends ChangeNotifier {
   bool get showThinkingIndicator => _awaitingFirstChunk;
 
   void init() {
+    DuplicateAccountFlowGate.reset();
     _surfaceController = SurfaceController(catalogs: [mayaCatalog()]);
     _transport = A2uiTransportAdapter(
       onSend: (message) => _geminiTransport.onSend(message, _transport),
