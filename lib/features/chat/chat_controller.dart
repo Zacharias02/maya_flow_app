@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:genui/genui.dart';
@@ -6,6 +7,11 @@ import 'package:genui/genui.dart';
 import '../../catalog/maya_catalog.dart';
 import '../../core/ai/gemini_transport.dart';
 import 'a2ui_leak_sanitizer.dart';
+
+/// Random pause before calling the model — useful for showcasing typing spiels.
+const _kDemoResponseDelayEnabled = true;
+const _kDemoResponseDelayMinSeconds = 2;
+const _kDemoResponseDelayMaxSeconds = 8;
 
 class ChatController extends ChangeNotifier {
   late final SurfaceController _surfaceController;
@@ -20,7 +26,8 @@ class ChatController extends ChangeNotifier {
 
   List<ChatEntry> get messages => List.unmodifiable(_messages);
   SurfaceHost get surfaceHost => _surfaceController;
-  bool get isWaiting => _conversation.state.value.isWaiting;
+  bool get isWaiting =>
+      _awaitingFirstChunk || _conversation.state.value.isWaiting;
 
   /// True from send until the first streamed text or surface arrives for that turn.
   bool get showThinkingIndicator => _awaitingFirstChunk;
@@ -96,6 +103,12 @@ class ChatController extends ChangeNotifier {
     _awaitingFirstChunk = true;
     notifyListeners();
     try {
+      if (_kDemoResponseDelayEnabled) {
+        final span =
+            _kDemoResponseDelayMaxSeconds - _kDemoResponseDelayMinSeconds + 1;
+        final seconds = _kDemoResponseDelayMinSeconds + Random().nextInt(span);
+        await Future.delayed(Duration(seconds: seconds));
+      }
       await _conversation.sendRequest(ChatMessage.user(text));
     } finally {
       _awaitingFirstChunk = false;
@@ -140,7 +153,10 @@ class ChatEntry {
     // chunks that arrive at a word boundary without the separating space.
     // We skip digit–digit so numbers split across chunks stay intact.
     final needsSpace = _isWordChar(last) && _isLetter(first);
-    return ChatEntry._(text: existing + (needsSpace ? ' ' : '') + more, isUser: isUser);
+    return ChatEntry._(
+      text: existing + (needsSpace ? ' ' : '') + more,
+      isUser: isUser,
+    );
   }
 }
 

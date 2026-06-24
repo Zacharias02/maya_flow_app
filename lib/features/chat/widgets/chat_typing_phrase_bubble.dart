@@ -1,21 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
 import '../chat_theme.dart';
-import 'cycling_fade_phrases.dart';
+import 'timed_typing_phrases.dart';
 
-/// Typing row: fades between **two** random lines from [kTypingStatusPhrases] until the reply starts.
+/// Typing row: Lottie bubble plus timed status spiels until the reply starts.
 class ChatTypingPhraseBubble extends StatelessWidget {
   const ChatTypingPhraseBubble({super.key});
-
-  static const List<String> kTypingStatusPhrases = [
-    'Consulting the Oracle of Banking wisdom…',
-    'Sharpening my digital pencils 📝',
-    "Polishing up a reply you'll love 💚",
-    'Double-knotting my chatbot shoelaces…',
-    'Decrypting your curiosity, one bit at a time!',
-    'Doing some AI yoga stretches before replying…',
-    'Tuning the chatbot antenna for best results…',
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -23,18 +14,39 @@ class ChatTypingPhraseBubble extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Padding(
         padding: const EdgeInsets.only(left: 16, right: 64, top: 4, bottom: 4),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: CyclingFadePhrases(
-            phrases: kTypingStatusPhrases,
-            randomSubsetSize: 2,
-            style: TextStyle(
-              color: MayaChatTheme.appBarTitle.withValues(alpha: 0.72),
-              fontSize: 14,
-              fontStyle: FontStyle.italic,
-              height: 1.25,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+              decoration: ShapeDecoration(
+                color: MayaChatTheme.botBubbleBackground,
+                shape: ContinuousRectangleBorder(
+                  borderRadius: MayaChatTheme.bubbleBorderRadius(
+                    isUser: false,
+                    isLastInGroup: true,
+                  ),
+                ),
+              ),
+              child: Lottie.asset(
+                'assets/lottie/anim_typing.json',
+                height: 32,
+                fit: BoxFit.contain,
+              ),
             ),
-          ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 10),
+              child: TimedTypingPhrases(
+                enableFadingAnimation: false,
+                style: TextStyle(
+                  color: MayaChatTheme.appBarTitle.withValues(alpha: 0.72),
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                  height: 1.25,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

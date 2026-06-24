@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:genui/genui.dart';
 
-import '../../core/mock/mock_data.dart';
 import '../../shared/customer_chat_copy.dart';
-import '../../shared/widgets/maya_animated_orb.dart';
 import 'chat_controller.dart';
 import 'chat_theme.dart';
 import 'widgets/chat_quick_reply_column.dart';
@@ -121,6 +120,11 @@ class _ChatPageState extends State<ChatPage> {
                     return _MessageItem(
                       entry: messages[index],
                       surfaceHost: _controller.surfaceHost,
+                      isLastInGroup: _isLastInSenderGroup(
+                        messages,
+                        index,
+                        botTypingFollows: showThinking,
+                      ),
                     );
                   },
                 );
@@ -133,7 +137,6 @@ class _ChatPageState extends State<ChatPage> {
               controller: _textController,
               onSend: _send,
               isWaiting: _controller.isWaiting,
-              showThinking: _controller.showThinkingIndicator,
             ),
           ),
         ],
@@ -152,37 +155,7 @@ class _EmptyState extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const MayaAnimatedOrb(size: 148),
-                  const SizedBox(height: 28),
-                  Text(
-                    'Hello, $mockClientFirstName!',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: MayaChatTheme.appBarTitle,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'How can I assist you today?',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: MayaChatTheme.hintAndSubtitle,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+        Expanded(child: SizedBox.shrink()),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: ChatQuickReplyColumn(
@@ -195,11 +168,36 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
+bool _isLastInSenderGroup(
+  List<ChatEntry> messages,
+  int index, {
+  required bool botTypingFollows,
+}) {
+  final entry = messages[index];
+  if (entry.isSurface) return false;
+
+  if (index + 1 < messages.length &&
+      messages[index + 1].isUser == entry.isUser) {
+    return false;
+  }
+
+  if (!entry.isUser && botTypingFollows && index == messages.length - 1) {
+    return false;
+  }
+
+  return true;
+}
+
 class _MessageItem extends StatelessWidget {
   final ChatEntry entry;
   final SurfaceHost surfaceHost;
+  final bool isLastInGroup;
 
-  const _MessageItem({required this.entry, required this.surfaceHost});
+  const _MessageItem({
+    required this.entry,
+    required this.surfaceHost,
+    required this.isLastInGroup,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -213,16 +211,18 @@ class _MessageItem extends StatelessWidget {
     }
 
     if (entry.isUser) {
-      return _UserBubble(text: entry.text ?? '');
+      return _UserBubble(text: entry.text ?? '', isLastInGroup: isLastInGroup);
     }
 
-    return _AiBubble(text: entry.text ?? '');
+    return _AiBubble(text: entry.text ?? '', isLastInGroup: isLastInGroup);
   }
 }
 
 class _UserBubble extends StatelessWidget {
   final String text;
-  const _UserBubble({required this.text});
+  final bool isLastInGroup;
+
+  const _UserBubble({required this.text, required this.isLastInGroup});
 
   @override
   Widget build(BuildContext context) {
@@ -231,10 +231,13 @@ class _UserBubble extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.fromLTRB(56, 4, 16, 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: const ShapeDecoration(
+        decoration: ShapeDecoration(
           color: MayaChatTheme.brandGreen,
           shape: ContinuousRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(28)),
+            borderRadius: MayaChatTheme.bubbleBorderRadius(
+              isUser: true,
+              isLastInGroup: isLastInGroup,
+            ),
           ),
         ),
         child: Text(
@@ -248,20 +251,27 @@ class _UserBubble extends StatelessWidget {
 
 class _AiBubble extends StatelessWidget {
   final String text;
-  const _AiBubble({required this.text});
+  final bool isLastInGroup;
+
+  const _AiBubble({required this.text, required this.isLastInGroup});
 
   @override
   Widget build(BuildContext context) {
-    final baseStyle = MayaChatTheme.botBubbleTextStyle(MayaChatTheme.appBarTitle);
+    final baseStyle = MayaChatTheme.botBubbleTextStyle(
+      MayaChatTheme.appBarTitle,
+    );
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 4, 56, 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: const ShapeDecoration(
+        decoration: ShapeDecoration(
           color: MayaChatTheme.botBubbleBackground,
           shape: ContinuousRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(28)),
+            borderRadius: MayaChatTheme.bubbleBorderRadius(
+              isUser: false,
+              isLastInGroup: isLastInGroup,
+            ),
           ),
         ),
         child: MarkdownBody(
@@ -271,7 +281,9 @@ class _AiBubble extends StatelessWidget {
             strong: baseStyle.copyWith(fontWeight: FontWeight.w700),
             em: baseStyle.copyWith(fontStyle: FontStyle.italic),
             listBullet: baseStyle,
-            blockquote: baseStyle.copyWith(color: MayaChatTheme.hintAndSubtitle),
+            blockquote: baseStyle.copyWith(
+              color: MayaChatTheme.hintAndSubtitle,
+            ),
             h1: baseStyle.copyWith(fontSize: 17, fontWeight: FontWeight.w700),
             h2: baseStyle.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
             h3: baseStyle.copyWith(fontWeight: FontWeight.w700),
@@ -285,56 +297,88 @@ class _AiBubble extends StatelessWidget {
   }
 }
 
-class _InputBar extends StatelessWidget {
+class _InputBar extends StatefulWidget {
   final TextEditingController controller;
   final VoidCallback onSend;
   final bool isWaiting;
-  final bool showThinking;
 
   const _InputBar({
     required this.controller,
     required this.onSend,
     required this.isWaiting,
-    required this.showThinking,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final hint = showThinking
-        ? 'Please wait…'
-        : isWaiting
-        ? 'Maya is replying…'
-        : 'Type a message';
+  State<_InputBar> createState() => _InputBarState();
+}
 
-    return SafeArea(
-      top: false,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.fromLTRB(8, 10, 12, 10),
-        decoration: const BoxDecoration(
-          color: MayaChatTheme.inputBarBackground,
-        ),
+class _InputBarState extends State<_InputBar> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onTextChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onTextChanged);
+    super.dispose();
+  }
+
+  void _onTextChanged() => setState(() {});
+
+  bool get _hasText => widget.controller.text.trim().isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    final showSend = _hasText;
+    final canSend = _hasText && !widget.isWaiting;
+
+    return Container(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
+      color: Color.fromRGBO(244, 245, 245, 1),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             IconButton(
-              icon: const Icon(Icons.photo_camera_outlined),
-              color: MayaChatTheme.appBarTitle,
+              icon: SvgPicture.asset(
+                'assets/svg/camera.svg',
+                width: 24,
+                height: 24,
+                colorFilter: widget.isWaiting
+                    ? ColorFilter.mode(
+                        MayaChatTheme.appBarTitle.withValues(alpha: 0.38),
+                        BlendMode.srcIn,
+                      )
+                    : null,
+              ),
               tooltip: 'Camera',
-              onPressed: isWaiting ? null : () {},
+              onPressed: widget.isWaiting ? null : () {},
             ),
             IconButton(
-              icon: const Icon(Icons.description_outlined),
-              color: MayaChatTheme.appBarTitle,
+              icon: SvgPicture.asset(
+                'assets/svg/attachment.svg',
+                width: 24,
+                height: 24,
+                colorFilter: widget.isWaiting
+                    ? ColorFilter.mode(
+                        MayaChatTheme.appBarTitle.withValues(alpha: 0.38),
+                        BlendMode.srcIn,
+                      )
+                    : null,
+              ),
               tooltip: 'Attachments',
-              onPressed: isWaiting ? null : () {},
+              onPressed: widget.isWaiting ? null : () {},
             ),
-            Expanded(
+            Flexible(
               child: TextField(
-                controller: controller,
-                onSubmitted: (_) => onSend(),
+                controller: widget.controller,
+                onSubmitted: (_) {
+                  if (canSend) widget.onSend();
+                },
                 textInputAction: TextInputAction.send,
-                enabled: !isWaiting,
                 minLines: 1,
                 maxLines: 4,
                 style: const TextStyle(
@@ -343,15 +387,40 @@ class _InputBar extends StatelessWidget {
                 ),
                 cursorColor: MayaChatTheme.brandGreen,
                 decoration: InputDecoration(
-                  hintText: hint,
+                  hintText: 'Type a message',
                   hintStyle: const TextStyle(
                     color: MayaChatTheme.hintAndSubtitle,
                   ),
                   filled: true,
                   fillColor: MayaChatTheme.scaffoldBackground,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
+                  contentPadding: EdgeInsets.fromLTRB(
+                    16,
+                    12,
+                    showSend ? 6 : 16,
+                    12,
+                  ),
+                  suffixIcon: showSend
+                      ? Padding(
+                          padding: const EdgeInsets.only(right: 14),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: canSend ? widget.onSend : null,
+                              borderRadius: BorderRadius.circular(13),
+                              child: SvgPicture.asset(
+                                canSend
+                                    ? 'assets/svg/send_icon.svg'
+                                    : 'assets/svg/send_icon_disable.svg',
+                                width: 26,
+                                height: 26,
+                              ),
+                            ),
+                          ),
+                        )
+                      : null,
+                  suffixIconConstraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 26,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: MayaChatTheme.inputFieldRadius,
@@ -368,33 +437,12 @@ class _InputBar extends StatelessWidget {
                   focusedBorder: OutlineInputBorder(
                     borderRadius: MayaChatTheme.inputFieldRadius,
                     borderSide: const BorderSide(
-                      color: MayaChatTheme.brandGreen,
-                      width: 1.5,
-                    ),
-                  ),
-                  disabledBorder: OutlineInputBorder(
-                    borderRadius: MayaChatTheme.inputFieldRadius,
-                    borderSide: BorderSide(
-                      color: MayaChatTheme.inputFieldBorder.withValues(
-                        alpha: 0.6,
-                      ),
+                      color: MayaChatTheme.inputFieldBorder,
                     ),
                   ),
                 ),
               ),
             ),
-            if (!isWaiting) ...[
-              const SizedBox(width: 4),
-              IconButton.filled(
-                onPressed: onSend,
-                icon: const Icon(Icons.send_rounded, size: 20),
-                style: IconButton.styleFrom(
-                  backgroundColor: MayaChatTheme.brandGreen,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ] else
-              const SizedBox(width: 4),
           ],
         ),
       ),
