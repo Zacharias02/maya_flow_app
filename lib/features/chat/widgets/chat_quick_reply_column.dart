@@ -4,11 +4,7 @@ import '../chat_theme.dart';
 
 /// Vertically stacked, right-aligned pill suggestions (outlined green on white).
 class ChatQuickReplyColumn extends StatelessWidget {
-  const ChatQuickReplyColumn({
-    super.key,
-    required this.suggestions,
-    required this.onSelect,
-  });
+  const ChatQuickReplyColumn({super.key, required this.suggestions, required this.onSelect});
 
   final List<String> suggestions;
   final ValueChanged<String> onSelect;
@@ -35,27 +31,35 @@ class _QuickReplyPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const borderRadius = BorderRadius.all(Radius.circular(20));
+    const minWidth = 36.0;
+    final maxWidth = (MediaQuery.of(context).size.width * 0.90).clamp(minWidth, double.infinity);
+
     return Material(
-      color: MayaChatTheme.scaffoldBackground,
-      borderRadius: BorderRadius.circular(20),
+      color: Colors.transparent,
+      borderRadius: borderRadius,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: borderRadius,
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 300),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          clipBehavior: Clip.antiAlias,
+          constraints: BoxConstraints(maxWidth: maxWidth, minWidth: minWidth),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: MayaChatTheme.brandGreen, width: 1),
+            borderRadius: borderRadius,
+            border: Border.all(color: MayaChatTheme.brandGreen),
+            color: Colors.transparent,
           ),
-          child: Text(
-            label,
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: MayaChatTheme.brandGreen,
-              fontSize: 14,
-              height: 1.3,
-            ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Text(
+                  label,
+                  textAlign: TextAlign.end,
+                  style: const TextStyle(color: MayaChatTheme.brandGreen, fontSize: 14, height: 1.3),
+                ),
+              ),
+            ],
           ),
         ),
       ),

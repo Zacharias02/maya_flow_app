@@ -3,6 +3,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:genui/genui.dart';
 
+import '../../shared/chat_scope.dart';
 import '../../shared/customer_chat_copy.dart';
 import 'chat_controller.dart';
 import 'chat_theme.dart';
@@ -73,30 +74,28 @@ class _ChatPageState extends State<ChatPage> {
         surfaceTintColor: Colors.transparent,
 
         title: const Text(
-          'Customer service chat',
-          style: TextStyle(
-            color: MayaChatTheme.appBarTitle,
-            fontWeight: FontWeight.w700,
-            fontSize: 17,
-          ),
+          'Customer Service Chat',
+          style: TextStyle(color: MayaChatTheme.appBarTitle, fontWeight: FontWeight.w700, fontSize: 17),
         ),
         centerTitle: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.access_time_outlined),
-            color: MayaChatTheme.appBarTitle,
+            icon: SvgPicture.asset('assets/svg/icon_history.svg', width: 24, height: 24),
             tooltip: 'Chat history',
             onPressed: () {},
           ),
           IconButton(
-            icon: const Icon(Icons.close),
-            color: MayaChatTheme.appBarTitle,
+            icon: SvgPicture.asset('assets/svg/icon_close.svg', width: 24, height: 24),
             tooltip: 'Close',
             onPressed: () => Navigator.maybePop(context),
           ),
         ],
       ),
-      body: Column(
+      body: ChatScope(
+        addBotMessage: _controller.addBotMessage,
+        markSurfaceAsForm: _controller.markSurfaceAsForm,
+        clearSurfaceForm: _controller.clearSurfaceForm,
+        child: Column(
         children: [
           Expanded(
             child: ListenableBuilder(
@@ -104,80 +103,54 @@ class _ChatPageState extends State<ChatPage> {
               builder: (context, _) {
                 final messages = _controller.messages;
                 final showThinking = _controller.showThinkingIndicator;
-                if (messages.isEmpty) {
-                  return _EmptyState(onSelectSuggestion: _sendPrefilled);
-                }
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.only(bottom: 12),
-                  itemCount: messages.length + (showThinking ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (showThinking && index == messages.length) {
-                      return ChatTypingPhraseBubble(
-                        key: ValueKey<int>(messages.length),
-                      );
-                    }
-                    return _MessageItem(
-                      entry: messages[index],
-                      surfaceHost: _controller.surfaceHost,
-                      isLastInGroup: _isLastInSenderGroup(
-                        messages,
-                        index,
-                        botTypingFollows: showThinking,
+                final showSuggestions = !_controller.hasUserMessages;
+                final extraCount = showThinking ? 1 : 0;
+                return Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.only(bottom: 12),
+                        itemCount: messages.length + extraCount,
+                        itemBuilder: (context, index) {
+                          if (index < messages.length) {
+                            return _MessageItem(
+                              entry: messages[index],
+                              surfaceHost: _controller.surfaceHost,
+                              isLastInGroup: _isLastInSenderGroup(messages, index, botTypingFollows: showThinking),
+                            );
+                          }
+                          return ChatTypingPhraseBubble(key: ValueKey<int>(messages.length));
+                        },
                       ),
-                    );
-                  },
+                    ),
+                    if (showSuggestions)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                        child: ChatQuickReplyColumn(suggestions: kDefaultChatQuickReplies, onSelect: _sendPrefilled),
+                      ),
+                  ],
                 );
               },
             ),
           ),
           ListenableBuilder(
             listenable: _controller,
-            builder: (context, _) => _InputBar(
-              controller: _textController,
-              onSend: _send,
-              isWaiting: _controller.isWaiting,
-            ),
+            builder: (context, _) =>
+                _InputBar(controller: _textController, onSend: _send, isWaiting: _controller.isWaiting),
           ),
         ],
+        ),
       ),
     );
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onSelectSuggestion});
-
-  final ValueChanged<String> onSelectSuggestion;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(child: SizedBox.shrink()),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: ChatQuickReplyColumn(
-            suggestions: kDefaultChatQuickReplies,
-            onSelect: onSelectSuggestion,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-bool _isLastInSenderGroup(
-  List<ChatEntry> messages,
-  int index, {
-  required bool botTypingFollows,
-}) {
+bool _isLastInSenderGroup(List<ChatEntry> messages, int index, {required bool botTypingFollows}) {
   final entry = messages[index];
   if (entry.isSurface) return false;
 
-  if (index + 1 < messages.length &&
-      messages[index + 1].isUser == entry.isUser) {
+  if (index + 1 < messages.length && messages[index + 1].isUser == entry.isUser) {
     return false;
   }
 
@@ -193,20 +166,14 @@ class _MessageItem extends StatelessWidget {
   final SurfaceHost surfaceHost;
   final bool isLastInGroup;
 
-  const _MessageItem({
-    required this.entry,
-    required this.surfaceHost,
-    required this.isLastInGroup,
-  });
+  const _MessageItem({required this.entry, required this.surfaceHost, required this.isLastInGroup});
 
   @override
   Widget build(BuildContext context) {
     if (entry.isSurface) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        child: Surface(
-          surfaceContext: surfaceHost.contextFor(entry.surfaceId!),
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+        child: Surface(surfaceContext: surfaceHost.contextFor(entry.surfaceId!)),
       );
     }
 
@@ -234,16 +201,10 @@ class _UserBubble extends StatelessWidget {
         decoration: ShapeDecoration(
           color: MayaChatTheme.brandGreen,
           shape: ContinuousRectangleBorder(
-            borderRadius: MayaChatTheme.bubbleBorderRadius(
-              isUser: true,
-              isLastInGroup: isLastInGroup,
-            ),
+            borderRadius: MayaChatTheme.bubbleBorderRadius(isUser: true, isLastInGroup: isLastInGroup),
           ),
         ),
-        child: Text(
-          text,
-          style: MayaChatTheme.userBubbleTextStyle(Colors.white),
-        ),
+        child: Text(text, style: MayaChatTheme.userBubbleTextStyle(Colors.white)),
       ),
     );
   }
@@ -257,9 +218,7 @@ class _AiBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseStyle = MayaChatTheme.botBubbleTextStyle(
-      MayaChatTheme.appBarTitle,
-    );
+    final baseStyle = MayaChatTheme.botBubbleTextStyle(MayaChatTheme.appBarTitle);
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -268,10 +227,7 @@ class _AiBubble extends StatelessWidget {
         decoration: ShapeDecoration(
           color: MayaChatTheme.botBubbleBackground,
           shape: ContinuousRectangleBorder(
-            borderRadius: MayaChatTheme.bubbleBorderRadius(
-              isUser: false,
-              isLastInGroup: isLastInGroup,
-            ),
+            borderRadius: MayaChatTheme.bubbleBorderRadius(isUser: false, isLastInGroup: isLastInGroup),
           ),
         ),
         child: MarkdownBody(
@@ -281,16 +237,15 @@ class _AiBubble extends StatelessWidget {
             strong: baseStyle.copyWith(fontWeight: FontWeight.w700),
             em: baseStyle.copyWith(fontStyle: FontStyle.italic),
             listBullet: baseStyle,
-            blockquote: baseStyle.copyWith(
-              color: MayaChatTheme.hintAndSubtitle,
-            ),
+            blockquote: baseStyle.copyWith(color: MayaChatTheme.hintAndSubtitle),
             h1: baseStyle.copyWith(fontSize: 17, fontWeight: FontWeight.w700),
             h2: baseStyle.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
             h3: baseStyle.copyWith(fontWeight: FontWeight.w700),
             pPadding: EdgeInsets.zero,
-            blockSpacing: 6,
+            blockSpacing: 20,
           ),
           shrinkWrap: true,
+          softLineBreak: true,
         ),
       ),
     );
@@ -302,11 +257,7 @@ class _InputBar extends StatefulWidget {
   final VoidCallback onSend;
   final bool isWaiting;
 
-  const _InputBar({
-    required this.controller,
-    required this.onSend,
-    required this.isWaiting,
-  });
+  const _InputBar({required this.controller, required this.onSend, required this.isWaiting});
 
   @override
   State<_InputBar> createState() => _InputBarState();
@@ -337,114 +288,100 @@ class _InputBarState extends State<_InputBar> {
     return Container(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
       color: Color.fromRGBO(244, 245, 245, 1),
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            IconButton(
-              icon: SvgPicture.asset(
-                'assets/svg/camera.svg',
-                width: 24,
-                height: 24,
-                colorFilter: widget.isWaiting
-                    ? ColorFilter.mode(
-                        MayaChatTheme.appBarTitle.withValues(alpha: 0.38),
-                        BlendMode.srcIn,
-                      )
-                    : null,
-              ),
-              tooltip: 'Camera',
-              onPressed: widget.isWaiting ? null : () {},
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'Always check key info since our chatbot can make mistakes',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: MayaChatTheme.hintAndSubtitle, fontSize: 11, height: 1.3),
             ),
-            IconButton(
-              icon: SvgPicture.asset(
-                'assets/svg/attachment.svg',
-                width: 24,
-                height: 24,
-                colorFilter: widget.isWaiting
-                    ? ColorFilter.mode(
-                        MayaChatTheme.appBarTitle.withValues(alpha: 0.38),
-                        BlendMode.srcIn,
-                      )
-                    : null,
-              ),
-              tooltip: 'Attachments',
-              onPressed: widget.isWaiting ? null : () {},
-            ),
-            Flexible(
-              child: TextField(
-                controller: widget.controller,
-                onSubmitted: (_) {
-                  if (canSend) widget.onSend();
-                },
-                textInputAction: TextInputAction.send,
-                minLines: 1,
-                maxLines: 4,
-                style: const TextStyle(
-                  color: MayaChatTheme.appBarTitle,
-                  fontSize: 15,
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: SvgPicture.asset(
+                    'assets/svg/camera.svg',
+                    width: 24,
+                    height: 24,
+                    colorFilter: widget.isWaiting
+                        ? ColorFilter.mode(MayaChatTheme.appBarTitle.withValues(alpha: 0.38), BlendMode.srcIn)
+                        : null,
+                  ),
+                  tooltip: 'Camera',
+                  onPressed: widget.isWaiting ? null : () {},
                 ),
-                cursorColor: MayaChatTheme.brandGreen,
-                decoration: InputDecoration(
-                  hintText: 'Type a message',
-                  hintStyle: const TextStyle(
-                    color: MayaChatTheme.hintAndSubtitle,
+                IconButton(
+                  icon: SvgPicture.asset(
+                    'assets/svg/attachment.svg',
+                    width: 24,
+                    height: 24,
+                    colorFilter: widget.isWaiting
+                        ? ColorFilter.mode(MayaChatTheme.appBarTitle.withValues(alpha: 0.38), BlendMode.srcIn)
+                        : null,
                   ),
-                  filled: true,
-                  fillColor: MayaChatTheme.scaffoldBackground,
-                  contentPadding: EdgeInsets.fromLTRB(
-                    16,
-                    12,
-                    showSend ? 6 : 16,
-                    12,
-                  ),
-                  suffixIcon: showSend
-                      ? Padding(
-                          padding: const EdgeInsets.only(right: 14),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: canSend ? widget.onSend : null,
-                              borderRadius: BorderRadius.circular(13),
-                              child: SvgPicture.asset(
-                                canSend
-                                    ? 'assets/svg/send_icon.svg'
-                                    : 'assets/svg/send_icon_disable.svg',
-                                width: 26,
-                                height: 26,
+                  tooltip: 'Attachments',
+                  onPressed: widget.isWaiting ? null : () {},
+                ),
+                Flexible(
+                  child: TextField(
+                    controller: widget.controller,
+                    onSubmitted: (_) {
+                      if (canSend) widget.onSend();
+                    },
+                    textInputAction: TextInputAction.send,
+                    minLines: 1,
+                    maxLines: 4,
+                    style: const TextStyle(color: MayaChatTheme.appBarTitle, fontSize: 15),
+                    cursorColor: MayaChatTheme.brandGreen,
+                    decoration: InputDecoration(
+                      hintText: 'Type a message',
+                      hintStyle: const TextStyle(color: MayaChatTheme.hintAndSubtitle),
+                      filled: true,
+                      fillColor: MayaChatTheme.scaffoldBackground,
+                      contentPadding: EdgeInsets.fromLTRB(16, 12, showSend ? 6 : 16, 12),
+                      suffixIcon: showSend
+                          ? Padding(
+                              padding: const EdgeInsets.only(right: 14),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: canSend ? widget.onSend : null,
+                                  borderRadius: BorderRadius.circular(13),
+                                  child: SvgPicture.asset(
+                                    canSend ? 'assets/svg/send_icon.svg' : 'assets/svg/send_icon_disable.svg',
+                                    width: 26,
+                                    height: 26,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        )
-                      : null,
-                  suffixIconConstraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 26,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: MayaChatTheme.inputFieldRadius,
-                    borderSide: const BorderSide(
-                      color: MayaChatTheme.inputFieldBorder,
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: MayaChatTheme.inputFieldRadius,
-                    borderSide: const BorderSide(
-                      color: MayaChatTheme.inputFieldBorder,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: MayaChatTheme.inputFieldRadius,
-                    borderSide: const BorderSide(
-                      color: MayaChatTheme.inputFieldBorder,
+                            )
+                          : null,
+                      suffixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 26),
+                      border: OutlineInputBorder(
+                        borderRadius: MayaChatTheme.inputFieldRadius,
+                        borderSide: const BorderSide(color: MayaChatTheme.inputFieldBorder),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: MayaChatTheme.inputFieldRadius,
+                        borderSide: const BorderSide(color: MayaChatTheme.inputFieldBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: MayaChatTheme.inputFieldRadius,
+                        borderSide: const BorderSide(color: MayaChatTheme.inputFieldBorder),
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

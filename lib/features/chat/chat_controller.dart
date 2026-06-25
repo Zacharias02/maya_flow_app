@@ -6,6 +6,7 @@ import 'package:genui/genui.dart';
 
 import '../../catalog/maya_catalog.dart';
 import '../../core/ai/gemini_transport.dart';
+import '../../core/mock/mock_data.dart';
 import 'a2ui_leak_sanitizer.dart';
 
 /// Random pause before calling the model — useful for showcasing typing spiels.
@@ -26,23 +27,48 @@ class ChatController extends ChangeNotifier {
 
   List<ChatEntry> get messages => List.unmodifiable(_messages);
   SurfaceHost get surfaceHost => _surfaceController;
-  bool get isWaiting =>
-      _awaitingFirstChunk || _conversation.state.value.isWaiting;
+  bool get isWaiting => _awaitingFirstChunk || _conversation.state.value.isWaiting;
+  bool get hasUserMessages => _messages.any((m) => m.isUser);
+
+  void addBotMessage(String text) {
+    _messages.add(ChatEntry.aiText(text));
+    notifyListeners();
+  }
+
+  final Set<String> _activeFormSurfaces = {};
+
+  void markSurfaceAsForm(String surfaceId) {
+    _activeFormSurfaces.add(surfaceId);
+  }
+
+  void clearSurfaceForm(String surfaceId) {
+    _activeFormSurfaces.remove(surfaceId);
+  }
 
   /// True from send until the first streamed text or surface arrives for that turn.
   bool get showThinkingIndicator => _awaitingFirstChunk;
 
   void init() {
     _surfaceController = SurfaceController(catalogs: [mayaCatalog()]);
-    _transport = A2uiTransportAdapter(
-      onSend: (message) => _geminiTransport.onSend(message, _transport),
-    );
-    _conversation = Conversation(
-      controller: _surfaceController,
-      transport: _transport,
-    );
+    _transport = A2uiTransportAdapter(onSend: (message) => _geminiTransport.onSend(message, _transport));
+    _conversation = Conversation(controller: _surfaceController, transport: _transport);
     _conversation.state.addListener(notifyListeners);
     _eventSub = _conversation.events.listen(_onEvent);
+    _addGreeting();
+  }
+
+  void _addGreeting() {
+    _messages.add(
+      ChatEntry.aiText(
+        '👋 Hi $mockClientFirstName! I\'m **MayaFlow**, Maya\'s virtual customer service assistant.\n\n'
+        'I can help you with:\n\n'
+        '💳 Qualifying for Maya Easy Credit\n'
+        '⏳ Following up on a pending Instapay transfer\n'
+        '⚠️ Deactivating your account\n\n'
+        'Please note: I\'m an AI and may occasionally make mistakes. '
+        'For critical account actions, always verify with official Maya support.',
+      ),
+    );
   }
 
   /// Hides A2UI JSON that GenUI surfaced as plain text when the model used the wrong JSON shape.
@@ -90,22 +116,25 @@ class ChatController extends ChangeNotifier {
       print(event.error);
       _awaitingFirstChunk = false;
       _currentAiTextIndex = null;
-      _messages.add(
-        ChatEntry.aiText('Something went wrong. Please try again.'),
-      );
+      _messages.add(ChatEntry.aiText('Something went wrong. Please try again.'));
       notifyListeners();
     }
   }
 
   Future<void> sendMessage(String text) async {
+    if (_activeFormSurfaces.isNotEmpty) {
+      _messages.removeWhere(
+        (m) => m.isSurface && _activeFormSurfaces.contains(m.surfaceId),
+      );
+      _activeFormSurfaces.clear();
+    }
     _currentAiTextIndex = null;
     _messages.add(ChatEntry.user(text));
     _awaitingFirstChunk = true;
     notifyListeners();
     try {
       if (_kDemoResponseDelayEnabled) {
-        final span =
-            _kDemoResponseDelayMaxSeconds - _kDemoResponseDelayMinSeconds + 1;
+        final span = _kDemoResponseDelayMaxSeconds - _kDemoResponseDelayMinSeconds + 1;
         final seconds = _kDemoResponseDelayMinSeconds + Random().nextInt(span);
         await Future.delayed(Duration(seconds: seconds));
       }
@@ -135,10 +164,8 @@ class ChatEntry {
   const ChatEntry._({this.text, this.surfaceId, required this.isUser});
 
   factory ChatEntry.user(String text) => ChatEntry._(text: text, isUser: true);
-  factory ChatEntry.aiText(String text) =>
-      ChatEntry._(text: text, isUser: false);
-  factory ChatEntry.surface(String id) =>
-      ChatEntry._(surfaceId: id, isUser: false);
+  factory ChatEntry.aiText(String text) => ChatEntry._(text: text, isUser: false);
+  factory ChatEntry.surface(String id) => ChatEntry._(surfaceId: id, isUser: false);
 
   bool get isSurface => surfaceId != null;
 
@@ -153,10 +180,7 @@ class ChatEntry {
     // chunks that arrive at a word boundary without the separating space.
     // We skip digit–digit so numbers split across chunks stay intact.
     final needsSpace = _isWordChar(last) && _isLetter(first);
-    return ChatEntry._(
-      text: existing + (needsSpace ? ' ' : '') + more,
-      isUser: isUser,
-    );
+    return ChatEntry._(text: existing + (needsSpace ? ' ' : '') + more, isUser: isUser);
   }
 }
 

@@ -1,6 +1,6 @@
 /// Copy shown as tappable quick replies in the customer-service chat and mirrored in the AI system prompt.
 const List<String> kDefaultChatQuickReplies = [
-  "Why was my recent transfer delayed or not received?",
-  "Why am I missing a cashback or reward?",
-  "How do I send money to someone using @username?",
+  "How can I be qualified to Maya Easy Credit?",
+  "My Instapay transfer hasn't been credited yet to the receiving account",
+  "I want to deactivate my account",
 ];
